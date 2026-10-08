@@ -63,7 +63,8 @@ button {
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
+  /* clip, not hidden: hidden would make .app a scroll box and break sticky children */
+  overflow: clip;
 }
 
 .star {
@@ -1043,5 +1044,23 @@ input[type='range'] {
 @media (prefers-reduced-motion: reduce) {
   .tw {
     animation: none;
+  }
+}
+
+/* Territory details: docked to the bottom so the selected world is always in view */
+.detail-dock {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5;
+  outline: 6px solid var(--night);
+}
+.detail-dock .panel-art {
+  max-width: 220px;
+  flex-basis: 180px;
+}
+@media (max-width: 640px) {
+  .detail-dock {
+    position: static;
+    outline: 0;
   }
 }

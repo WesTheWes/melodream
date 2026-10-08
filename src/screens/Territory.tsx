@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Lock, Stars } from '../components/Mascot';
 import { GATE, HARMONY_STAGES, STAGES, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
 import { WorldScene } from '../components/WorldScene';
@@ -11,6 +11,15 @@ const HOME_LONG = { major: 'MAJOR HOME', minor: 'MINOR HOME', both: 'MAJOR & MIN
 export function Territory({ go }: { go: (s: Screen) => void }) {
   const { progress, dispatch, isUnlocked, highestUnlocked, dev } = useStore();
   const [sel, setSel] = useState(progress.stageId);
+  // The details panel is docked to the bottom of the screen on wide layouts.
+  // On phones it sits in the flow, so scroll it into view when a tile is picked.
+  const detailRef = useRef<HTMLElement | null>(null);
+  const pick = (id: number) => {
+    setSel(id);
+    if (window.matchMedia('(max-width: 640px)').matches) {
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    }
+  };
   const s = stageById(sel);
   const open = isUnlocked(s.id);
   const cleared = progress.cleared.filter((id) => !isHarmony(stageById(id))).length;
@@ -34,7 +43,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
                 type="button"
                 className={'tile' + (unlocked ? '' : ' locked') + (sel === st.id ? ' sel' : '')}
                 style={{ background: unlocked ? st.color : undefined }}
-                onClick={() => setSel(st.id)}
+                onClick={() => pick(st.id)}
                 aria-label={`${isHarmony(st) ? 'Progression path' : 'Territory'} ${stageCode(st)}, ${st.name}, ${badge.toLowerCase()}`}
               >
                 <div className="tile-art">
@@ -119,7 +128,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
         </div>
         <div className="tiles">{HARMONY_STAGES.map(tile)}</div>
 
-        <section className="panel row" style={{ background: open ? s.color : 'var(--muted)', color: 'var(--night)', alignItems: 'flex-start', gap: 24, padding: '22px 24px' }}>
+        <section ref={detailRef} className="panel row detail-dock" aria-live="polite" style={{ background: open ? s.color : 'var(--muted)', color: 'var(--night)', alignItems: 'flex-start', gap: 20, padding: '16px 20px' }}>
           <div className={'panel-art' + (open ? '' : ' dim')}>
             <WorldScene stageId={s.id} label={`${s.name}, pixel scene`} />
           </div>
