@@ -14,7 +14,7 @@ export interface Stage {
   keyboard: Record<Mode, number[]>;
   unlocks: string;
   color: string;
-  // Clean runs in a row needed to open the next territory.
+  // Clean takes needed among the last WINDOW to clear the territory.
   gate: number;
   // Does timing count in feedback? (Pitch always counts; rhythm is a later milestone.)
   rhythm: boolean;
@@ -28,7 +28,10 @@ export interface Stage {
   targets?: boolean;
 }
 
-export const GATE = 10;
+// The gate: 8 clean first takes out of your last 10. A miss costs one spot
+// instead of wiping everything, and 80% over ten takes is very hard to fluke.
+export const WINDOW = 10;
+export const GATE = 8;
 
 export const STAGES: Stage[] = [
   {

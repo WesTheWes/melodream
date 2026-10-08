@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { Lock, Stars } from '../components/Mascot';
-import { GATE, HARMONY_STAGES, STAGES, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
+import { GATE, HARMONY_STAGES, STAGES, WINDOW, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
 import { WorldScene } from '../components/WorldScene';
 import { DEV_ALLOWED } from '../dev';
-import { useStore } from '../state/store';
+import { cleanCount, useStore } from '../state/store';
 import type { Screen } from '../router';
 
 const HOME_LONG = { major: 'MAJOR HOME', minor: 'MINOR HOME', both: 'MAJOR & MINOR HOMES' };
@@ -34,7 +34,8 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
             const unlocked = isUnlocked(st.id);
             const done = progress.cleared.includes(st.id);
             const current = st.id === progress.stageId;
-            const runs = progress.streaks[String(st.id)] ?? 0;
+            const takes = progress.recent[String(st.id)] ?? [];
+            const clean = cleanCount(progress, st.id);
             const badge = done ? 'CLEAR' : current ? 'NOW' : unlocked ? (dev && !earned(st) ? 'DEV' : 'OPEN') : 'LOCKED';
             const badgeBg = done || current ? 'var(--cream)' : badge === 'DEV' ? 'var(--pink)' : unlocked ? 'var(--cream)' : 'var(--night)';
             return (
@@ -71,16 +72,16 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
                     {isHarmony(st) ? st.progressions?.[0] : st.home.toUpperCase()}
                   </span>
                   <span style={{ fontSize: 17, opacity: 0.85 }}>
-                    {done ? `${GATE}/${GATE}` : `${runs}/${GATE}${current ? ' in a row' : ''}`}
+                    {done ? 'cleared' : `${clean}/${WINDOW} clean`}
                   </span>
                 </div>
                 <div className="minipips" aria-hidden="true">
-                  {Array.from({ length: GATE }, (_, i) => (
+                  {Array.from({ length: WINDOW }, (_, i) => (
                     <span
                       key={i}
                       className="minipip"
                       style={{
-                        background: i < (done ? GATE : runs) ? (unlocked ? 'var(--night)' : '#8E86B8') : unlocked ? 'rgba(255,247,230,.45)' : 'var(--night)',
+                        background: done || takes[i] ? (unlocked ? 'var(--night)' : '#8E86B8') : takes[i] === false ? 'var(--pink)' : unlocked ? 'rgba(255,247,230,.45)' : 'var(--night)',
                       }}
                     />
                   ))}
@@ -94,7 +95,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
       <Stars />
       <main className="main">
         <div className="row between" style={{ alignItems: 'baseline' }}>
-          <h1 style={{ fontSize: 15 }}>Ten territories. Ten clean runs in a row opens each gate.</h1>
+          <h1 style={{ fontSize: 15 }}>Ten territories. 8 clean takes out of your last 10 opens each gate.</h1>
           <span className="muted" style={{ fontSize: 20 }}>
             {cleared} of 10 cleared{dev ? ' · free roam lets you jump anywhere' : ''}
           </span>
@@ -169,16 +170,14 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
             </div>
             <div style={{ borderTop: '3px dashed var(--ink)', paddingTop: 10, fontSize: 21 }}>
               {progress.cleared.includes(s.id)
-                ? 'Done. Ten in a row, every note nailed.'
+                ? `Done. ${GATE} of ${WINDOW} clean, every note nailed.`
                 : open
                   ? !earned(s)
                     ? 'Free roam: gate bypassed for testing.'
-                    : `${progress.streaks[String(s.id)] ?? 0} of ${GATE} in a row. ${
-                        GATE - (progress.streaks[String(s.id)] ?? 0)
-                      } more clean runs ${harmony ? 'clear this path' : 'open the next gate'}.`
+                    : `${cleanCount(progress, s.id)} clean of your last ${WINDOW}. Get to ${GATE} to ${harmony ? 'clear this path' : 'open the next gate'}.`
                   : harmony
                     ? `Opens when you clear ${stageById(s.after ?? 1).name} on the main road.`
-                    : `Needs ${GATE} clean runs in a row in ${STAGES[s.id - 2]?.name ?? 'the previous territory'}.`}
+                    : `Needs ${GATE} of ${WINDOW} clean in ${STAGES[s.id - 2]?.name ?? 'the previous territory'}.`}
             </div>
             {open ? (
               <button
@@ -201,7 +200,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
           </div>
         </section>
         <p className="muted" style={{ fontSize: 20 }}>
-          A clean run is a full lick with every pitch right on the first intentional take. A miss resets the streak to zero; retries never count. Ten in a row is hard to fluke.
+          A clean take is a full lick with every pitch right on the first try. The gate looks at your last 10 counted takes: a miss costs one spot, not everything. Retries and color-hint takes never count. 8 of 10 is hard to fluke.
         </p>
       </main>
     </>

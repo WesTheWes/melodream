@@ -1,9 +1,9 @@
 import { Mascot, Stars } from '../components/Mascot';
-import { Pips } from '../components/Header';
-import { GATE, STAGES, stageById } from '../music/stages';
+import { TakePips } from '../components/Header';
+import { GATE, STAGES, WINDOW, stageById } from '../music/stages';
 import { degreeColor, degreeLabel } from '../music/theory';
 import { masteryWord, topConfusions } from '../state/adapt';
-import { useStore } from '../state/store';
+import { cleanCount, useStore } from '../state/store';
 import type { Screen } from '../router';
 
 function label(pc: number): string {
@@ -13,7 +13,8 @@ function label(pc: number): string {
 export function Home({ go }: { go: (s: Screen) => void }) {
   const { progress, highestUnlocked } = useStore();
   const stage = stageById(progress.stageId);
-  const streak = progress.streaks[String(stage.id)] ?? 0;
+  const takes = progress.recent[String(stage.id)] ?? [];
+  const clean = cleanCount(progress, stage.id);
   const next = STAGES.find((s) => s.id === highestUnlocked + 0 && !progress.cleared.includes(s.id)) ?? STAGES.find((s) => s.id === highestUnlocked);
   const nextUnlock = STAGES.find((s) => s.id === (next?.id ?? 1) + 1);
   const mode = stage.home === 'minor' ? 'minor' : 'major';
@@ -47,7 +48,7 @@ export function Home({ go }: { go: (s: Screen) => void }) {
                 {progress.stats.licksHeard === 0 ? 'Start tonight' : 'Continue tonight'}
               </button>
               <span className="muted">
-                {stage.name} · {streak}/{GATE} in a row · about 5 min
+                {stage.name} · {clean}/{WINDOW} clean · about 5 min
               </span>
             </div>
           </section>
@@ -94,9 +95,9 @@ export function Home({ go }: { go: (s: Screen) => void }) {
               <div className="panel col" style={{ padding: 18, gap: 8 }}>
                 <div className="lbl" style={{ fontSize: 9 }}>NEXT UNLOCK</div>
                 <div style={{ fontSize: 24, lineHeight: 1.1 }}>{nextUnlock ? nextUnlock.name : 'Everything is open'}</div>
-                <Pips value={streak} max={GATE} big label={`${streak} of ${GATE} clean runs in a row`} />
+                <TakePips takes={takes} slots={WINDOW} big label={`${clean} clean of your last ${takes.length} takes`} />
                 <div className="muted" style={{ fontSize: 20 }}>
-                  {streak >= GATE ? 'Gate open.' : `${streak} of ${GATE} in a row. Don't slip.`}
+                  {clean >= GATE ? 'Gate open.' : `${clean} of your last ${WINDOW} clean. ${GATE} opens the gate.`}
                 </div>
               </div>
             </div>

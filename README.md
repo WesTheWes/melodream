@@ -26,7 +26,9 @@ No backend. Progress lives in `localStorage` under `melodream.progress.v1`.
 5. **Play** – tap the degrees on the in-app keyboard or play them on your instrument (experimental mic pitch tracking).
 6. **Feedback** – expected vs. played note by note, a "Work on" insight, and a slow replay to say the degrees out loud.
 
-You must play every pitch right to move on. A clean run is a perfect **first** take. Ten clean runs in a row open the next territory; a miss resets the streak to zero; retries never count.
+You must play every pitch right to move on. A clean take is a perfect **first** take. **8 clean out of your last 10** counted takes opens the next territory (`GATE` and `WINDOW` in `stages.ts`); a miss costs one spot instead of wiping the run. Retries and color-hint takes never count.
+
+After 4 misses in your last 5 takes (never before 5), the feedback screen shows a gentle warm-up card: go back one territory (progress here is kept), slow down, try it in C, or keep going, which hides the card for 10 takes.
 
 ## Code map
 

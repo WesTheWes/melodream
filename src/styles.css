@@ -304,6 +304,9 @@ p {
 .pip.on {
   background: var(--mint);
 }
+.pip.miss {
+  background: var(--pink);
+}
 .pips.big .pip {
   width: 18px;
   height: 18px;
@@ -1063,4 +1066,23 @@ input[type='range'] {
     position: static;
     outline: 0;
   }
+}
+
+/* Warm-up card: a gentle nudge after a rough patch */
+.warmup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--violet);
+  color: var(--night);
+  border: 4px solid var(--ink);
+}
+.warmup p {
+  margin: 0;
+}
+.warmup .btn.ghost {
+  background: var(--cream);
+  color: var(--night);
 }

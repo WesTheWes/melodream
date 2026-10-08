@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { engine, type Voice } from '../audio/engine';
 import { listenForNotes, type PitchListener } from '../audio/pitch';
-import { Pips, Stepper } from '../components/Header';
+import { Stepper, TakePips } from '../components/Header';
 import { ChangesLane } from '../components/ChangesLane';
 import { Keyboard } from '../components/Keyboard';
 import { WorldScene } from '../components/WorldScene';
 import { Mascot, Stars } from '../components/Mascot';
 import type { Chord, Lick } from '../music/licks';
-import { GATE, HARMONY_STAGES, STAGES, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
+import { GATE, HARMONY_STAGES, STAGES, WINDOW, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
 import { chordToneLabel, chordToneWord, degreeColor, degreeLabel, degreeSpoken, hintFor, pcOf, spellNote, tonicName, type Mode, type Scale } from '../music/theory';
 import { pickLick, pickTonic, whyThisLick } from '../state/adapt';
-import { useStore } from '../state/store';
+import { cleanCount, needsWarmup, useStore } from '../state/store';
 import type { Screen } from '../router';
 
 interface Round {
@@ -277,15 +277,20 @@ export function Play({ go }: { go: (s: Screen) => void }) {
 
   const hints = progress.colorHints;
   const litColor = (n: number) => (hints ? degreeColor(n) : 'var(--cream)');
-  const streak = progress.streaks[String(stage.id)] ?? 0;
+  const takes = progress.recent[String(stage.id)] ?? [];
+  const clean = cleanCount(progress, stage.id);
   const perfect = phase === 5 && expected.every((n, i) => played[i] === n);
   const correct = expected.filter((n, i) => played[i] === n).length;
   const onRetry = attempt > 1;
   const counted = attempt === 1 && !hints;
   // A clean run needs every pitch, and every Land-the-Target guess, right first time.
   const cleanTake = perfect && !targetMiss;
-  const justReset = phase === 5 && !cleanTake && counted && streak === 0;
-  const gateOpen = phase === 5 && cleanTake && counted && streak >= GATE;
+  const justMissed = phase === 5 && !cleanTake && counted;
+  const gateOpen = phase === 5 && cleanTake && counted && clean >= GATE;
+  // Struggling here? Offer a warm-up one territory back (for a path, the
+  // main-road territory it opened from). Progress here is kept.
+  const warmupStage = isHarmony(stage) ? (stage.after ? stageById(stage.after) : undefined) : stage.id > 1 ? stageById(stage.id - 1) : undefined;
+  const showWarmup = phase === 5 && justMissed && needsWarmup(progress, stage.id);
   const nextStage = isHarmony(stage) ? undefined : STAGES.find((s) => s.id === stage.id + 1);
   const celebrate = gateOpen && !clearedAtStart.current && !celebrateDismissed;
   // Where the prompt sends you: the next main-road territory, or after a path,
@@ -357,11 +362,10 @@ export function Play({ go }: { go: (s: Screen) => void }) {
               </span>
             )}
             <span className="row banner-chip" style={{ gap: 10 }}>
-              <span className="muted" style={{ fontSize: 20 }}>clean runs in a row</span>
-              <Pips value={streak} max={GATE} label={`${streak} of ${GATE} clean runs in a row`} />
-              <span className="ps" style={{ fontSize: 9, color: justReset ? 'var(--pink)' : streak >= GATE ? 'var(--gold)' : 'var(--cream)' }}>
-                {streak}/{GATE}
-                {justReset ? ' · RESET' : ''}
+              <span className="muted" style={{ fontSize: 20 }}>last {WINDOW} takes</span>
+              <TakePips takes={takes} slots={WINDOW} label={`${clean} clean of your last ${takes.length} takes; ${GATE} clears the gate`} />
+              <span className="ps" style={{ fontSize: 9, color: justMissed ? 'var(--pink)' : clean >= GATE ? 'var(--gold)' : 'var(--cream)' }}>
+                {clean}/{WINDOW} · NEED {GATE}
               </span>
             </span>
           </div>
@@ -667,7 +671,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
             )}
             {gateOpen && !nextStage && (
               <div className="band gold">
-                Ten in a row. {stage.name} is cleared.{' '}
+                {GATE} of your last {WINDOW} clean. {stage.name} is cleared.{' '}
                 <button type="button" className="btn ink small" style={{ marginLeft: 12 }} onClick={() => go('territory')}>
                   See the map
                 </button>
@@ -675,10 +679,44 @@ export function Play({ go }: { go: (s: Screen) => void }) {
             )}
             {gateOpen && nextStage && (
               <div className="band gold">
-                Ten in a row. The gate to {nextStage.name} is open.{' '}
+                {GATE} of your last {WINDOW} clean. The gate to {nextStage.name} is open.{' '}
                 <button type="button" className="btn ink small" style={{ marginLeft: 12 }} onClick={() => go('territory')}>
                   See the map
                 </button>
+              </div>
+            )}
+            {showWarmup && (
+              <div className="warmup">
+                <div className="col" style={{ gap: 6, flex: '1 1 320px', minWidth: 0 }}>
+                  <div className="lbl" style={{ color: 'var(--night)', opacity: 0.7 }}>
+                    THIS ONE&apos;S FIGHTING BACK
+                  </div>
+                  <p style={{ fontSize: 23 }}>
+                    {warmupStage
+                      ? `A few laps in ${warmupStage.name} might help. Your ${clean}/${WINDOW} here is kept, and warm-up licks lean on the degrees you have been missing.`
+                      : 'Try it slower, or in C for a while. Both still count toward the gate.'}
+                  </p>
+                </div>
+                <div className="row" style={{ gap: 8 }}>
+                  {warmupStage && (
+                    <button type="button" className="btn ink small" onClick={() => dispatch({ type: 'setStage', stageId: warmupStage.id })}>
+                      Warm up in {warmupStage.name}
+                    </button>
+                  )}
+                  {bpm > 76 && (
+                    <button type="button" className="btn ghost small" onClick={() => { dispatch({ type: 'setTempo', tempo: Math.max(60, bpm - 20) }); dispatch({ type: 'snoozeWarmup', stageId: stage.id }); }}>
+                      Slow down
+                    </button>
+                  )}
+                  {!progress.alwaysC && (
+                    <button type="button" className="btn ghost small" onClick={() => { dispatch({ type: 'setAlwaysC', on: true }); dispatch({ type: 'snoozeWarmup', stageId: stage.id }); }}>
+                      Try in C
+                    </button>
+                  )}
+                  <button type="button" className="btn ghost small" onClick={() => dispatch({ type: 'snoozeWarmup', stageId: stage.id })}>
+                    Keep going
+                  </button>
+                </div>
               </div>
             )}
             <div className="row" style={{ gap: 12 }}>
@@ -727,9 +765,9 @@ export function Play({ go }: { go: (s: Screen) => void }) {
                     : onRetry
                       ? `All ${total} on a retry: you move on, but no pip for the gate.`
                       : targetMiss
-                        ? `All ${total} right, but a missed target means this one does not count. The streak resets to 0.`
-                        : 'Clean run. Pip earned.'
-                  : `Play all ${total} right to move on. ${hints ? 'Hinted takes never touch the streak.' : attempt === 1 ? 'The streak resets to 0.' : 'Retries never count toward the gate.'}`}
+                        ? `All ${total} right, but a missed target makes this one a miss.`
+                        : 'Clean take. Pip earned.'
+                  : `Play all ${total} right to move on. ${hints ? 'Hinted takes never count toward the gate.' : attempt === 1 ? 'This one counts as a miss.' : 'Retries never count toward the gate.'}`}
               </span>
             </div>
           </section>
@@ -865,7 +903,7 @@ function Targets({
         </>
       ) : (
         <p style={{ fontSize: 22 }}>
-          {bars.every((b) => picks[b] === targetPc(b)) ? 'Every target landed. Now imagine the whole line.' : 'A target slipped, so this round will not count toward the streak. Finish it anyway: the replay shows where the line went.'}
+          {bars.every((b) => picks[b] === targetPc(b)) ? 'Every target landed. Now imagine the whole line.' : 'A target slipped, so this round counts as a miss. Finish it anyway: the replay shows where the line went.'}
         </p>
       )}
     </div>
@@ -910,7 +948,7 @@ function LevelUp({
           </div>
           <div className="col" style={{ gap: 10 }}>
             <div className="lbl" style={{ color: 'var(--night)', opacity: 0.7 }}>
-              TEN CLEAN RUNS IN A ROW
+              {GATE} OF YOUR LAST {WINDOW} CLEAN
             </div>
             <h2 id="levelup-title" style={{ fontSize: 22, color: 'var(--night)', lineHeight: 1.4 }}>
               {isHarmony(stage) ? 'Path cleared!' : 'Gate open!'}

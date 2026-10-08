@@ -35,11 +35,14 @@ export function Header({
   );
 }
 
-export function Pips({ value, max = 10, big = false, label }: { value: number; max?: number; big?: boolean; label?: string }) {
+// The gate window: one square per recent counted take, oldest first.
+// Mint = clean, pink = miss, dark = not played yet.
+export function TakePips({ takes, slots = 10, big = false, label }: { takes: boolean[]; slots?: number; big?: boolean; label?: string }) {
+  const clean = takes.filter(Boolean).length;
   return (
-    <div className={'pips' + (big ? ' big' : '')} aria-label={label ?? `${value} of ${max}`}>
-      {Array.from({ length: max }, (_, i) => (
-        <span key={i} className={'pip' + (i < value ? ' on' : '')} />
+    <div className={'pips' + (big ? ' big' : '')} role="img" aria-label={label ?? `${clean} clean of the last ${takes.length} takes`}>
+      {Array.from({ length: slots }, (_, i) => (
+        <span key={i} className={'pip' + (i < takes.length ? (takes[i] ? ' on' : ' miss') : '')} />
       ))}
     </div>
   );

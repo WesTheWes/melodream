@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
-import { GATE, MAIN_STAGES, stageById, isHarmony } from '../music/stages';
+import { GATE, MAIN_STAGES, WINDOW, stageById, isHarmony } from '../music/stages';
 import { pcOf } from '../music/theory';
 import type { Voice } from '../audio/engine';
 import type { KbLayout } from '../components/Keyboard';
@@ -34,7 +34,12 @@ export interface SavedLick {
 export interface Progress {
   v: 1;
   stageId: number;
-  streaks: Record<string, number>;
+  // Per territory: the last WINDOW counted takes, oldest first (true = clean).
+  recent: Record<string, boolean[]>;
+  // Per territory: how many counted takes ever, and the take count until which
+  // the warm-up card stays hidden after "Keep going".
+  takes: Record<string, number>;
+  warmupSnooze: Record<string, number>;
   cleared: number[];
   dev: boolean;
   tempo: number;
@@ -65,7 +70,9 @@ export const emptyStats = (): Stats => ({
 export const initialProgress = (): Progress => ({
   v: 1,
   stageId: 1,
-  streaks: {},
+  recent: {},
+  takes: {},
+  warmupSnooze: {},
   cleared: [],
   dev: false,
   tempo: 108,
@@ -98,7 +105,7 @@ export type Action =
       stageId: number;
       expected: number[];
       played: number[];
-      // A take counts toward the streak only if it is the first take and no hints were on.
+      // A take counts toward the gate only if it is the first take and no hints were on.
       counts: boolean;
       // Harmony licks: the roman numeral under each note, for the degree-over-chord map.
       chords?: string[];
@@ -107,7 +114,22 @@ export type Action =
     }
   | { type: 'saveLick'; lickId: string; tonic: number }
   | { type: 'unsaveLick'; lickId: string }
+  | { type: 'snoozeWarmup'; stageId: number }
   | { type: 'resetAll' };
+
+// Clean takes among the last WINDOW in a territory.
+export function cleanCount(p: Progress, stageId: number): number {
+  return (p.recent[String(stageId)] ?? []).filter(Boolean).length;
+}
+
+// The warm-up card: shown after 4 misses in the last 5 counted takes, never
+// before 5 takes, and hidden for WARMUP_SNOOZE takes after "Keep going".
+const WARMUP_SNOOZE = 10;
+export function needsWarmup(p: Progress, stageId: number): boolean {
+  const key = String(stageId);
+  const last5 = (p.recent[key] ?? []).slice(-5);
+  return last5.length === 5 && last5.filter((x) => !x).length >= 4 && (p.takes[key] ?? 0) >= (p.warmupSnooze[key] ?? 0);
+}
 
 function bump(t: Record<string, Tally>, key: string, right: boolean): void {
   const cur = t[key] ?? { seen: 0, right: 0 };
@@ -181,17 +203,17 @@ export function reducer(p: Progress, a: Action): Progress {
           bump(stats.moves, `${pcOf(a.expected[i - 1])}>${pcOf(exp)}`, ok && prevOk);
         }
       });
-      const streaks = { ...p.streaks };
       const key = String(a.stageId);
-      let cleared = p.cleared;
+      let { recent, takes, cleared } = p;
       if (a.extraMiss) perfect = false;
       if (a.counts) {
-        const cur = streaks[key] ?? 0;
-        streaks[key] = perfect ? Math.min(GATE, cur + 1) : 0;
+        const window = [...(recent[key] ?? []), perfect].slice(-WINDOW);
+        recent = { ...recent, [key]: window };
+        takes = { ...takes, [key]: (takes[key] ?? 0) + 1 };
         if (perfect) stats.cleanRuns += 1;
-        if (streaks[key] >= GATE && !cleared.includes(a.stageId)) cleared = [...cleared, a.stageId];
+        if (window.filter(Boolean).length >= GATE && !cleared.includes(a.stageId)) cleared = [...cleared, a.stageId];
       }
-      return { ...p, streaks, cleared, stats };
+      return { ...p, recent, takes, cleared, stats };
     }
     case 'saveLick': {
       const rest = p.saved.filter((s) => s.lickId !== a.lickId);
@@ -199,6 +221,10 @@ export function reducer(p: Progress, a: Action): Progress {
     }
     case 'unsaveLick':
       return { ...p, saved: p.saved.filter((s) => s.lickId !== a.lickId) };
+    case 'snoozeWarmup': {
+      const key = String(a.stageId);
+      return { ...p, warmupSnooze: { ...p.warmupSnooze, [key]: (p.takes[key] ?? 0) + WARMUP_SNOOZE } };
+    }
     case 'resetAll':
       return initialProgress();
   }
@@ -210,9 +236,16 @@ function load(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return initialProgress();
-    const parsed = JSON.parse(raw) as Progress;
+    const parsed = JSON.parse(raw) as Progress & { streaks?: Record<string, number> };
     if (parsed.v !== 1) return initialProgress();
-    return { ...initialProgress(), ...parsed, stats: { ...emptyStats(), ...parsed.stats } };
+    const { streaks, ...rest } = parsed;
+    const next: Progress = { ...initialProgress(), ...rest, stats: { ...emptyStats(), ...parsed.stats } };
+    // Older saves kept a streak count; carry it over as that many clean takes.
+    if (streaks && !parsed.recent) {
+      next.recent = Object.fromEntries(Object.entries(streaks).map(([k, n]) => [k, Array<boolean>(Math.min(n, WINDOW)).fill(true)]));
+      next.takes = Object.fromEntries(Object.entries(streaks).map(([k, n]) => [k, n]));
+    }
+    return next;
   } catch {
     return initialProgress();
   }
