@@ -56,7 +56,7 @@ Notes are semitones above the tonic (0 = 1, 4 = 3, 7 = 5, 12 = 1 an octave up). 
 
 ## Progression Paths (harmony licks)
 
-Ten territories (H1–H10) where licks ride on chord changes: I–IV, I–V–vi–IV, blues, ii–V–I, turnarounds, borrowed chords, the minor ii–V, modal vamps, bebop vocabulary and funk vamps. Jazz and blues paths swing their eighth notes (`SWING_STAGES` and swing tags in `licks.ts`). Each opens when its main-road territory is cleared (`after` in `stages.ts`).
+Twelve territories (H1–H12) where licks ride on chord changes: I–IV, I–V–vi–IV, blues, ii–V–I, turnarounds, borrowed chords, the minor ii–V, modal vamps, bebop vocabulary and funk vamps. Jazz and blues paths swing their eighth notes (`SWING_STAGES` and swing tags in `licks.ts`). Each opens when its main-road territory is cleared (`after` in `stages.ts`).
 
 The home rule: notes are always graded as degrees of the home key. Borrowed chords just bring altered degrees (♭3, ♭6, ♭7), and a brief secondary dominant brings ♯4. Feedback adds the chord lens (each note's job over its chord), and from H4 on, **Land the Target** asks which degree each new chord lands on. A missed target spoils the clean run. Home never moves in these paths; real modulation is future work.
 
@@ -71,6 +71,19 @@ Chords live in `CH` in the same file. Clearing any territory shows a level-up pr
 ## Keyboard layouts
 
 The Play screen toggles between **PIANO** (real key positions, one octave from home, degrees shown as colored dots) and **SAME SHAPE · IN C** (movable-do: always drawn in C, so each degree sits on the same key whatever key the lick sounds in). The choice is saved with progress. A separate **ALWAYS IN C** setting plays every lick in C instead of a new key each round.
+
+## Where the licks come from
+
+About 1,800 licks in all (`src/music/library.ts` gathers them):
+
+| Source | File | Licks |
+| --- | --- | --- |
+| Hand-written | `licks.ts` | 135 |
+| Generated: rule-based melodies for every territory, seeded so ids are stable | `generate.ts` | ~790 |
+| *Licks For Days* by Christopher Zuar, used with permission (C versions; ids follow the book's numbering) | `book.ts` | 136 |
+| Phrases from real solos, Weimar Jazz Database, ODbL v1.0 (see `data/README.md`) | `data/wjazzd-licks.json` → `solos.ts` | 727 |
+
+The picker rests recently heard licks (roughly the last 60% of a territory's pool), so repeats are rare. The keyboard spans two octaves from home, stretching further when a lick needs it.
 
 ## Saved licks
 

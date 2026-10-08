@@ -70,7 +70,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
 
   const startRound = useCallback(() => {
     const p = progressRef.current;
-    const lick = pickLick(stage, p.stats, p.lastLickId);
+    const lick = pickLick(stage, p.stats, p.recentLicks);
     clearedAtStart.current = p.cleared.includes(stage.id);
     setCelebrateDismissed(false);
     setRound({ lick, tonic: pickTonic(lick, Math.random, p.alwaysC), mode: lick.home, scale: lick.scale });
@@ -251,9 +251,11 @@ export function Play({ go }: { go: (s: Screen) => void }) {
       const r = tapRef.current;
       const rel = midi - round.tonic;
       const pc = pcOf(rel);
-      // Octave ambiguity only matters for home; pick whichever the lick wants next.
+      // Instruments sound in any octave: take the octave of this pitch class
+      // closest to the note the lick wants next.
       const slot = phase === 2 ? 0 : played.length;
-      const semi = pc === 0 && expected[slot] === 12 ? 12 : pc;
+      const want = expected[slot] ?? pc;
+      const semi = pc + 12 * Math.round((want - pc) / 12);
       r(semi, { silent: true });
     })
       .then((l) => {
@@ -331,6 +333,9 @@ export function Play({ go }: { go: (s: Screen) => void }) {
     round.lick.notes.forEach((n) => set.add(pcOf(n)));
     return set;
   }, [round, phase, stage, kbSemis]);
+  // Two octaves from home, stretched down or up if this lick goes further.
+  const kbLo = round ? Math.min(0, ...round.lick.notes) : 0;
+  const kbHi = round ? Math.max(kbLo + 24, ...round.lick.notes) : 24;
   const ring = phase === 5 && firstWrong >= 0 && played[firstWrong] != null ? [expected[firstWrong], played[firstWrong]] : [];
 
   if (!round) return null;
@@ -816,7 +821,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
                 </button>
               </div>
             </div>
-            <Keyboard available={available} tonicMidi={round.tonic} mode={round.mode} keyLabel={keyLabel} labels={progress.labels} layout={progress.kbLayout} onTap={(s) => handleTap(s)} down={tapDown} ring={ring} disabled={phase === 2 && startOk} />
+            <Keyboard lo={kbLo} hi={kbHi} available={available} tonicMidi={round.tonic} mode={round.mode} keyLabel={keyLabel} labels={progress.labels} layout={progress.kbLayout} onTap={(s) => handleTap(s)} down={tapDown} ring={ring} disabled={phase === 2 && startOk} />
           </section>
         )}
 

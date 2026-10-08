@@ -1,4 +1,5 @@
-import { licksForStage, type Lick } from '../music/licks';
+import { licksForStage } from '../music/library';
+import type { Lick } from '../music/licks';
 import type { Stage } from '../music/stages';
 import { pcOf, type Mode } from '../music/theory';
 import type { Stats } from './store';
@@ -33,9 +34,16 @@ export function topConfusions(stats: Stats, n = 3): { expected: number; got: num
 }
 
 // Choose the next lick for a stage. Licks that lean on shaky degrees or
-// confused moves are weighted up; the lick just played is avoided.
-export function pickLick(stage: Stage, stats: Stats, lastId: string | null, rng: () => number = Math.random): Lick {
-  const pool = licksForStage(stage.id).filter((l) => l.id !== lastId);
+// confused moves are weighted up. Recently heard licks sit out: roughly the
+// last 60% of the stage's pool, so you work through most of it before repeats.
+export function pickLick(stage: Stage, stats: Stats, recent: string[], rng: () => number = Math.random): Lick {
+  const all = licksForStage(stage.id);
+  const ids = new Set(all.map((l) => l.id));
+  const mine = recent.filter((id) => ids.has(id));
+  const resting = new Set(mine.slice(-Math.max(1, Math.floor(all.length * 0.6))));
+  let pool = all.filter((l) => !resting.has(l.id));
+  if (pool.length === 0) pool = all.filter((l) => l.id !== mine[mine.length - 1]);
+  if (pool.length === 0) pool = all;
   const confusions = topConfusions(stats, 5);
   const weights = pool.map((l) => {
     let w = 1;
@@ -81,12 +89,14 @@ export function pickLick(stage: Stage, stats: Stats, lastId: string | null, rng:
 }
 
 // Pick a tonic for the lick so the key varies from phrase to phrase but the
-// phrase stays in a comfortable register (tonic between G3 and E4).
+// whole phrase stays between F3 and C6. Two-octave licks get a lower home.
 export function pickTonic(lick: Lick, rng: () => number = Math.random, alwaysC = false): number {
-  if (alwaysC) return 60;
   const top = Math.max(...lick.notes);
-  const lo = 55;
-  const hi = top >= 12 ? 62 : 64;
+  const bottom = Math.min(...lick.notes);
+  if (alwaysC) return top > 24 ? 48 : 60;
+  let lo = Math.max(48, 53 - bottom);
+  const hi = Math.min(64, 84 - top);
+  if (lo > hi) lo = hi;
   return lo + Math.floor(rng() * (hi - lo + 1));
 }
 

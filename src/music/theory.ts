@@ -46,7 +46,9 @@ export function degreeLabel(semi: number, opts: { octaveMark?: boolean } = {}): 
   const pc = ((semi % 12) + 12) % 12;
   const base = LABELS[pc];
   if (opts.octaveMark === false) return base;
+  if (semi >= 24) return base + '↑↑';
   if (semi >= 12) return base + '↑';
+  if (semi < -12) return base + '↓↓';
   if (semi < 0) return base + '↓';
   return base;
 }

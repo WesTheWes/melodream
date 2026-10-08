@@ -830,6 +830,16 @@ input[type='range'] {
   }
 }
 
+/* Two octaves: on narrow screens the keyboard scrolls sideways instead of squashing. */
+.pkb-scroll {
+  overflow-x: auto;
+}
+@media (max-width: 640px) {
+  .pkb {
+    min-width: 620px;
+  }
+}
+
 .pkb-note {
   margin-top: 10px;
   font-size: 19px;

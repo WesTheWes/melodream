@@ -33,7 +33,7 @@ const c = (roman: string, suffix: string, root: number, tones: number[]): ChordS
 
 // Chords used by Progression Paths. Every one stays in its home key: diatonic,
 // borrowed from the parallel mode, or a brief secondary dominant.
-const CH = {
+export const CH = {
   // major home
   I: c('I', '', 0, [0, 4, 7]),
   Imaj7: c('I', 'maj7', 0, [0, 4, 7, 11]),
@@ -61,15 +61,16 @@ const CH = {
   IVdor: c('IV', '', 5, [5, 9, 12]),
   bVIm: c('♭VI', '', 8, [3, 8, 12]),
   bVIIm: c('♭VII', '', 10, [2, 5, 10]),
+  viio7: c('vii°7', '°7', 11, [-1, 2, 5, 8]),
 } satisfies Record<string, ChordShape>;
-type ChordKey = keyof typeof CH;
+export type ChordKey = keyof typeof CH;
 
 // A harmony lick, bar by bar: [chord, [[semi, beats], …], chord length in beats].
 // Each bar's notes must fill it exactly, so the first note of every bar lands
 // on the chord change.
-type Bar = [ChordKey, [number, number][], number?];
+export type Bar = [ChordKey, [number, number][], number?];
 
-function H(id: string, stage: number, home: Mode, bars: Bar[], tag?: string): Lick {
+export function H(id: string, stage: number, home: Mode, bars: Bar[], tag?: string): Lick {
   const notes: number[] = [];
   const durs: number[] = [];
   const noteChord: number[] = [];
@@ -86,7 +87,30 @@ function H(id: string, stage: number, home: Mode, bars: Bar[], tag?: string): Li
   return { id, stage, home, scale: scaleFromTag(tag) ?? home, notes, durs, tag, swing: SWING_STAGES.has(stage) || swingFromTag(tag), changes, noteChord };
 }
 
-function L(id: string, stage: number, home: Mode, notes: number[], durs?: number[], tag?: string): Lick {
+// A harmony lick with its own chords (not from CH), e.g. from a transcription.
+export function HC(
+  id: string,
+  stage: number,
+  home: Mode,
+  bars: { chord: Omit<Chord, 'beats'>; notes: [number, number][] }[],
+  tag: string,
+  swing: boolean,
+): Lick {
+  const notes: number[] = [];
+  const durs: number[] = [];
+  const noteChord: number[] = [];
+  const changes: Chord[] = bars.map((b, bi) => {
+    b.notes.forEach(([n, d]) => {
+      notes.push(n);
+      durs.push(d);
+      noteChord.push(bi);
+    });
+    return { ...b.chord, beats: b.notes.reduce((a, [, d]) => a + d, 0) };
+  });
+  return { id, stage, home, scale: home, notes, durs, tag, swing, changes, noteChord };
+}
+
+export function L(id: string, stage: number, home: Mode, notes: number[], durs?: number[], tag?: string): Lick {
   const d = durs ?? notes.map((_, i) => (i === notes.length - 1 ? 2 : 0.5));
   if (d.length !== notes.length) throw new Error(`lick ${id}: durs length mismatch`);
   return { id, stage, home, scale: scaleFromTag(tag) ?? home, notes, durs: d, tag, swing: swingFromTag(tag) };
@@ -98,7 +122,7 @@ function swingFromTag(tag?: string): boolean {
   return !!tag && SWING_TAGS.test(tag);
 }
 // Progression Paths that swing: Blues Bayou, Jazz Junction, Turnaround Tower, Minor Moors, Bebop Boulevard.
-const SWING_STAGES = new Set([13, 14, 15, 17, 19]);
+const SWING_STAGES = new Set([13, 14, 15, 17, 19, 21]);
 
 function scaleFromTag(tag?: string): Scale | null {
   if (!tag) return null;
@@ -318,11 +342,3 @@ export const LICKS: Lick[] = [
   H('h10-d', 20, 'minor', [['i7', [[7, 0.25], [7, 0.25], [10, 0.5], [12, 0.25], [10, 0.25], [7, 0.5], [5, 0.5], [3, 0.5], [0, 1]]], ['IVdor', [[9, 0.5], [12, 0.25], [9, 0.25], [7, 0.5], [5, 0.5], [9, 0.75], [7, 0.25], [5, 1]]]], 'Dorian funk'),
   H('h10-e', 20, 'major', [['I7', [[3, 0.25], [4, 0.25], [0, 0.5], [3, 0.25], [4, 0.25], [7, 0.5], [10, 0.25], [9, 0.25], [7, 0.5], [4, 0.5], [0, 0.5]]], ['I7', [[12, 0.75], [10, 0.25], [7, 0.5], [9, 0.5], [7, 0.25], [4, 0.25], [3, 0.5], [0, 1]]]], 'funk'),
 ];
-
-export function licksForStage(stage: number): Lick[] {
-  return LICKS.filter((l) => l.stage === stage);
-}
-
-export function lickById(id: string): Lick | undefined {
-  return LICKS.find((l) => l.id === id);
-}

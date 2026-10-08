@@ -261,7 +261,7 @@ const WORLDS: Record<string, () => Art[]> = {
 
 // Stage id → world. 1–10 are the main road, 11–20 the Progression Paths.
 const BY_STAGE = ['steps', 'meadow', 'leap', 'hollow', 'peaks', 'ridge', 'forest', 'caves', 'modes', 'gardens',
-  'tide', 'pier', 'bayou', 'junction', 'tower', 'bridge', 'moors', 'cliffs', 'bebop', 'funk'];
+  'tide', 'pier', 'bayou', 'junction', 'tower', 'bridge', 'moors', 'cliffs', 'bebop', 'funk', 'junction', 'bebop'];
 
 const cache = new Map<number, Px[]>();
 

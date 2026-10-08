@@ -52,6 +52,8 @@ export interface Progress {
   // Beginner option: every lick sounds in C instead of a new key each round.
   alwaysC: boolean;
   lastLickId: string | null;
+  // Most recent lick ids, newest last, so the picker can avoid repeats.
+  recentLicks: string[];
   saved: SavedLick[];
   stats: Stats;
   days: string[]; // ISO dates with at least one lick heard
@@ -82,6 +84,7 @@ export const initialProgress = (): Progress => ({
   kbLayout: 'piano',
   alwaysC: false,
   lastLickId: null,
+  recentLicks: [],
   saved: [],
   stats: emptyStats(),
   days: [],
@@ -165,6 +168,7 @@ export function reducer(p: Progress, a: Action): Progress {
       return {
         ...p,
         lastLickId: a.lickId,
+        recentLicks: [...p.recentLicks.filter((id) => id !== a.lickId), a.lickId].slice(-60),
         days: p.days.includes(d) ? p.days : [...p.days, d],
         stats: { ...p.stats, licksHeard: p.stats.licksHeard + 1 },
       };
