@@ -2,6 +2,7 @@ import { Header } from './components/Header';
 import { useScreen } from './router';
 import { Home } from './screens/Home';
 import { Play } from './screens/Play';
+import { Saved } from './screens/Saved';
 import { Territory } from './screens/Territory';
 import { TonalMap } from './screens/TonalMap';
 import { StoreProvider, useStore } from './state/store';
@@ -35,6 +36,7 @@ function Shell() {
       {screen === 'play' && <Play go={go} />}
       {screen === 'territory' && <Territory go={go} />}
       {screen === 'map' && <TonalMap go={go} />}
+      {screen === 'saved' && <Saved go={go} />}
     </div>
   );
 }

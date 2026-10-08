@@ -39,7 +39,8 @@ You must play every pitch right to move on. A clean run is a perfect **first** t
 | `src/audio/pitch.ts` | autocorrelation pitch tracker for instrument input |
 | `src/state/store.tsx` | progress, streaks, tonal-map stats, persistence |
 | `src/state/adapt.ts` | adaptive lick selection weighted by confusions |
-| `src/screens/*` | Home, Play, Territory, TonalMap |
+| `src/art/worlds.ts` | pixel-art scene for every world (40 × 24 blocks), drawn by `components/WorldScene.tsx` |
+| `src/screens/*` | Home, Play, Territory, TonalMap, Saved |
 
 ## Adding a lick
 
@@ -69,6 +70,10 @@ Chords live in `CH` in the same file. Clearing any territory shows a level-up pr
 
 The Play screen toggles between **PIANO** (real key positions, one octave from home, degrees shown as colored dots) and **SAME SHAPE · IN C** (movable-do: always drawn in C, so each degree sits on the same key whatever key the lick sounds in). The choice is saved with progress. A separate **ALWAYS IN C** setting plays every lick in C instead of a new key each round.
 
+## Saved licks
+
+On the feedback screen, **☆ Save lick** keeps the lick (in the key you heard it) in the **SAVED** tab, where you can replay it, slowly or with its changes, and remove it. Saving only appears after a take, so the tab never gives an answer away early.
+
 ## Dev mode
 
-Territory → **DEV: FREE ROAM** unlocks every stage. On the Play screen it adds **REVEAL LICK** and **SKIP LICK**.
+Dev tools are hidden unless the URL has `?dev=me`, e.g. `https://westhewes.github.io/melodream/?dev=me`. Then Territory → **DEV: FREE ROAM** unlocks every stage, and the Play screen adds **REVEAL LICK** and **SKIP LICK**.

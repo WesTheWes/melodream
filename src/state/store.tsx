@@ -3,6 +3,7 @@ import { GATE, MAIN_STAGES, stageById, isHarmony } from '../music/stages';
 import { pcOf } from '../music/theory';
 import type { Voice } from '../audio/engine';
 import type { KbLayout } from '../components/Keyboard';
+import { DEV_ALLOWED } from '../dev';
 
 export interface Tally {
   seen: number;
@@ -23,6 +24,13 @@ export interface Stats {
   replays: number;
 }
 
+// A lick kept for later, in the key it was heard in.
+export interface SavedLick {
+  lickId: string;
+  tonic: number;
+  savedAt: string; // ISO date-time
+}
+
 export interface Progress {
   v: 1;
   stageId: number;
@@ -39,6 +47,7 @@ export interface Progress {
   // Beginner option: every lick sounds in C instead of a new key each round.
   alwaysC: boolean;
   lastLickId: string | null;
+  saved: SavedLick[];
   stats: Stats;
   days: string[]; // ISO dates with at least one lick heard
 }
@@ -66,6 +75,7 @@ export const initialProgress = (): Progress => ({
   kbLayout: 'piano',
   alwaysC: false,
   lastLickId: null,
+  saved: [],
   stats: emptyStats(),
   days: [],
 });
@@ -95,6 +105,8 @@ export type Action =
       // A slip earlier in the round (a missed Land-the-Target guess) that spoils the clean run.
       extraMiss?: boolean;
     }
+  | { type: 'saveLick'; lickId: string; tonic: number }
+  | { type: 'unsaveLick'; lickId: string }
   | { type: 'resetAll' };
 
 function bump(t: Record<string, Tally>, key: string, right: boolean): void {
@@ -181,6 +193,12 @@ export function reducer(p: Progress, a: Action): Progress {
       }
       return { ...p, streaks, cleared, stats };
     }
+    case 'saveLick': {
+      const rest = p.saved.filter((s) => s.lickId !== a.lickId);
+      return { ...p, saved: [{ lickId: a.lickId, tonic: a.tonic, savedAt: new Date().toISOString() }, ...rest] };
+    }
+    case 'unsaveLick':
+      return { ...p, saved: p.saved.filter((s) => s.lickId !== a.lickId) };
     case 'resetAll':
       return initialProgress();
   }
@@ -205,6 +223,8 @@ interface Ctx {
   dispatch: (a: Action) => void;
   isUnlocked: (stageId: number) => boolean;
   highestUnlocked: number;
+  // Free roam: only when dev tools are allowed (?dev=me) and switched on.
+  dev: boolean;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -225,12 +245,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // when its main-road territory is cleared.
     const highest = MAIN_STAGES.reduce((acc, s) => (progress.cleared.includes(s.id) ? Math.max(acc, s.id + 1) : acc), 1);
     const highestUnlocked = Math.min(highest, MAIN_STAGES.length);
+    const dev = DEV_ALLOWED && progress.dev;
     return {
       progress,
       dispatch,
       highestUnlocked,
+      dev,
       isUnlocked: (id) => {
-        if (progress.dev) return true;
+        if (dev) return true;
         const st = stageById(id);
         if (isHarmony(st)) return st.after != null && (progress.cleared.includes(st.after) || highestUnlocked > st.after);
         return id <= highestUnlocked;

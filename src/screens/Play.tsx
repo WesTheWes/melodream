@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { engine, type Voice } from '../audio/engine';
 import { listenForNotes, type PitchListener } from '../audio/pitch';
 import { Pips, Stepper } from '../components/Header';
+import { ChangesLane } from '../components/ChangesLane';
 import { Keyboard } from '../components/Keyboard';
+import { WorldScene } from '../components/WorldScene';
 import { Mascot, Stars } from '../components/Mascot';
 import type { Chord, Lick } from '../music/licks';
 import { GATE, HARMONY_STAGES, STAGES, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
-import { chordToneLabel, chordToneWord, degreeColor, degreeLabel, degreeSpoken, hintFor, isChordTone, pcOf, spellNote, tonicName, type Mode, type Scale } from '../music/theory';
+import { chordToneLabel, chordToneWord, degreeColor, degreeLabel, degreeSpoken, hintFor, pcOf, spellNote, tonicName, type Mode, type Scale } from '../music/theory';
 import { pickLick, pickTonic, whyThisLick } from '../state/adapt';
 import { useStore } from '../state/store';
 import type { Screen } from '../router';
@@ -21,7 +23,7 @@ interface Round {
 const lbl = (s: number) => degreeLabel(s);
 
 export function Play({ go }: { go: (s: Screen) => void }) {
-  const { progress, dispatch, isUnlocked, highestUnlocked } = useStore();
+  const { progress, dispatch, isUnlocked, highestUnlocked, dev } = useStore();
   const stageId = isUnlocked(progress.stageId) ? progress.stageId : highestUnlocked;
   const stage = stageById(stageId);
 
@@ -329,33 +331,40 @@ export function Play({ go }: { go: (s: Screen) => void }) {
   if (!round) return null;
 
   const why = whyThisLick(round.lick, progress.stats);
+  // Saving only appears in feedback, after the take, so the Saved tab can never show an answer early.
+  const isSaved = progress.saved.some((s) => s.lickId === round.lick.id);
   const keyLabel = `${tonicName(round.tonic, round.mode)} ${round.scale}`;
 
   return (
     <>
       <Stars />
-      <div className="hdr" style={{ borderTop: 0, background: 'var(--night)', padding: '12px 24px' }}>
-        <div className="hdr-left">
-          <span className="badge" style={{ background: stage.color }}>
-            {isHarmony(stage) ? 'PATH' : 'STAGE'} {stageCode(stage)} · {stage.name.toUpperCase()}
-          </span>
-          <span className="muted">
-            {progress.stats.licksHeard + (plays === 0 ? 1 : 0)} licks heard · Key of {keyLabel}
-            {round.lick.tag ? ` · ${round.lick.tag}` : ''}
-          </span>
-        </div>
-        <div className="hdr-right">
-          {hints && (
-            <span className="badge" style={{ background: 'var(--violet)' }} title="Takes with color hints on never count toward the gate">
-              COLOR HINTS ON · NOT COUNTED
+      <div className="world-banner">
+        <WorldScene stageId={stage.id} fit="banner" label={`${stage.name}, pixel scene`} />
+        <div className="hdr">
+          <div className="hdr-left">
+            <span className="badge" style={{ background: stage.color }}>
+              {isHarmony(stage) ? 'PATH' : 'STAGE'} {stageCode(stage)} · {stage.name.toUpperCase()}
             </span>
-          )}
-          <span className="muted" style={{ fontSize: 20 }}>clean runs in a row</span>
-          <Pips value={streak} max={GATE} label={`${streak} of ${GATE} clean runs in a row`} />
-          <span className="ps" style={{ fontSize: 9, color: justReset ? 'var(--pink)' : streak >= GATE ? 'var(--gold)' : 'var(--cream)' }}>
-            {streak}/{GATE}
-            {justReset ? ' · RESET' : ''}
-          </span>
+            <span className="muted banner-chip">
+              {progress.stats.licksHeard + (plays === 0 ? 1 : 0)} licks heard · Key of {keyLabel}
+              {round.lick.tag ? ` · ${round.lick.tag}` : ''}
+            </span>
+          </div>
+          <div className="hdr-right">
+            {hints && (
+              <span className="badge" style={{ background: 'var(--violet)' }} title="Takes with color hints on never count toward the gate">
+                COLOR HINTS ON · NOT COUNTED
+              </span>
+            )}
+            <span className="row banner-chip" style={{ gap: 10 }}>
+              <span className="muted" style={{ fontSize: 20 }}>clean runs in a row</span>
+              <Pips value={streak} max={GATE} label={`${streak} of ${GATE} clean runs in a row`} />
+              <span className="ps" style={{ fontSize: 9, color: justReset ? 'var(--pink)' : streak >= GATE ? 'var(--gold)' : 'var(--cream)' }}>
+                {streak}/{GATE}
+                {justReset ? ' · RESET' : ''}
+              </span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -697,6 +706,17 @@ export function Play({ go }: { go: (s: Screen) => void }) {
                   Try again →
                 </button>
               )}
+              <button
+                type="button"
+                className={'btn' + (isSaved ? ' ink' : ' ghost')}
+                onClick={() =>
+                  isSaved ? dispatch({ type: 'unsaveLick', lickId: round.lick.id }) : dispatch({ type: 'saveLick', lickId: round.lick.id, tonic: round.tonic })
+                }
+                aria-pressed={isSaved}
+                title="Keep this lick in your Saved Licks to replay later"
+              >
+                {isSaved ? '★ Saved' : '☆ Save lick'}
+              </button>
               <button type="button" className="btn mint" onClick={startRound} disabled={!perfect}>
                 Next lick →
               </button>
@@ -769,7 +789,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
           />
         )}
 
-        <Settings tempo={bpm} voice={progress.voice} onTempo={(t) => dispatch({ type: 'setTempo', tempo: t })} onVoice={(v) => dispatch({ type: 'setVoice', voice: v })} hints={hints} onHints={(on) => dispatch({ type: 'setColorHints', on })} alwaysC={progress.alwaysC} onAlwaysC={(on) => { dispatch({ type: 'setAlwaysC', on }); if (phase === 0) later(startRound, 0); }} dev={progress.dev} reveal={reveal} setReveal={setReveal} lick={round.lick} onNewLick={startRound} />
+        <Settings tempo={bpm} voice={progress.voice} onTempo={(t) => dispatch({ type: 'setTempo', tempo: t })} onVoice={(v) => dispatch({ type: 'setVoice', voice: v })} hints={hints} onHints={(on) => dispatch({ type: 'setColorHints', on })} alwaysC={progress.alwaysC} onAlwaysC={(on) => { dispatch({ type: 'setAlwaysC', on }); if (phase === 0) later(startRound, 0); }} dev={dev} reveal={reveal} setReveal={setReveal} lick={round.lick} onNewLick={startRound} />
       </main>
     </>
   );
@@ -786,72 +806,6 @@ function Mystery({ lick, soundingIdx, reveal, litColor }: { lick: Lick; sounding
           </div>
         );
       })}
-    </div>
-  );
-}
-
-// The chord lane: one box per chord, as wide as its beats, with the lick's
-// blocks inside the bar they sound in. `show` hides the notes entirely (just
-// the changes), masks them (?), or reveals them through the chosen lens.
-function ChangesLane({
-  lick,
-  chordName,
-  litBar,
-  soundingIdx,
-  show,
-  lens,
-  litColor,
-}: {
-  lick: Lick;
-  chordName: (c: Chord) => string;
-  litBar: number;
-  soundingIdx: number;
-  show: 'none' | 'hidden' | 'shown';
-  lens: 'degree' | 'chord';
-  litColor: (n: number) => string;
-}) {
-  const changes = lick.changes ?? [];
-  const noteChord = lick.noteChord ?? [];
-  return (
-    <div className="lane" aria-label={`Chord changes: ${changes.map((c) => chordName(c)).join(', ')}`}>
-      {changes.map((ch, bi) => (
-        <div key={bi} className={'lane-bar' + (litBar === bi ? ' lit' : '')} style={{ flex: `${ch.beats} 1 0` }}>
-          <div className="lane-head">
-            <span className="ps">{chordName(ch)}</span>
-            <span className="ps roman">{ch.roman}</span>
-          </div>
-          {show !== 'none' && (
-            <div className="lane-notes">
-              {lick.notes.map((n, i) => {
-                if (noteChord[i] !== bi) return null;
-                const lit = soundingIdx === i;
-                const ct = chordToneLabel(n, ch.root);
-                let bg: string | undefined;
-                let label = '?';
-                let sub = '';
-                if (show === 'shown') {
-                  if (lens === 'degree') {
-                    bg = degreeColor(n);
-                    label = lbl(n);
-                    sub = ct;
-                  } else {
-                    bg = isChordTone(n, ch.tones) ? 'var(--gold)' : 'var(--violet)';
-                    label = ct;
-                    sub = lbl(n);
-                  }
-                }
-                if (lit) bg = show === 'shown' ? bg : litColor(n);
-                return (
-                  <div key={i} className={'myst sm' + (lit ? ' lit' : '') + (show === 'shown' ? ' shown' : '')} style={{ flex: `${lick.durs[i]} 1 0`, background: bg }}>
-                    <span>{label}</span>
-                    {sub && <span className="lane-sub">{sub}</span>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ))}
     </div>
   );
 }
@@ -942,6 +896,9 @@ function LevelUp({
   return (
     <div className="levelup-back" role="dialog" aria-modal="true" aria-labelledby="levelup-title">
       <div className="levelup">
+        <div className="levelup-art">
+          <WorldScene stageId={(onward ?? stage).id} fit="banner" label={`${(onward ?? stage).name}, pixel scene`} />
+        </div>
         <div className="confetti" aria-hidden="true">
           {Array.from({ length: 18 }, (_, i) => (
             <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['var(--gold)', 'var(--pink)', 'var(--mint)', 'var(--violet)', '#6EC6FF', '#FF9F68'][i % 6] }} />

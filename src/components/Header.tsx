@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Screen } from '../router';
+import { useStore } from '../state/store';
 
 export function Header({
   screen,
@@ -10,6 +11,7 @@ export function Header({
   go: (s: Screen) => void;
   right?: ReactNode;
 }) {
+  const saved = useStore().progress.saved.length;
   const Nav = ({ to, label }: { to: Screen; label: string }) => (
     <button type="button" className={'navbtn' + (screen === to ? ' on' : '')} onClick={() => go(to)}>
       {label}
@@ -25,6 +27,7 @@ export function Header({
           <Nav to="play" label="PLAY" />
           <Nav to="territory" label="TERRITORY" />
           <Nav to="map" label="TONAL MAP" />
+          <Nav to="saved" label={saved ? `SAVED · ${saved}` : 'SAVED'} />
         </nav>
       </div>
       <div className="hdr-right">{right}</div>

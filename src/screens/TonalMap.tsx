@@ -7,7 +7,7 @@ import type { Screen } from '../router';
 const lbl = (pc: number) => degreeLabel(pc, { octaveMark: false });
 
 export function TonalMap({ go }: { go: (s: Screen) => void }) {
-  const { progress, highestUnlocked, dispatch } = useStore();
+  const { progress, highestUnlocked, dispatch, dev } = useStore();
   const stage = stageById(progress.stageId);
   const mode = stage.home === 'minor' ? 'minor' : 'major';
   const inPlay = stage.available[mode];
@@ -15,7 +15,7 @@ export function TonalMap({ go }: { go: (s: Screen) => void }) {
   const shown = Array.from({ length: 12 }, (_, pc) => pc);
   const conf = topConfusions(progress.stats, 3);
   const grid = inPlay.slice(0, 7);
-  const minorOpen = highestUnlocked >= 4 || progress.dev;
+  const minorOpen = highestUnlocked >= 4 || dev;
   // Harmony licks: degrees heard over particular chords, shakiest first.
   const overChord = Object.entries(progress.stats.overChord ?? {})
     .map(([key, t]) => {

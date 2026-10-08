@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Lock, Stars } from '../components/Mascot';
 import { GATE, HARMONY_STAGES, STAGES, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
+import { WorldScene } from '../components/WorldScene';
+import { DEV_ALLOWED } from '../dev';
 import { useStore } from '../state/store';
 import type { Screen } from '../router';
 
 const HOME_LONG = { major: 'MAJOR HOME', minor: 'MINOR HOME', both: 'MAJOR & MINOR HOMES' };
 
 export function Territory({ go }: { go: (s: Screen) => void }) {
-  const { progress, dispatch, isUnlocked, highestUnlocked } = useStore();
+  const { progress, dispatch, isUnlocked, highestUnlocked, dev } = useStore();
   const [sel, setSel] = useState(progress.stageId);
   const s = stageById(sel);
   const open = isUnlocked(s.id);
@@ -24,7 +26,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
             const done = progress.cleared.includes(st.id);
             const current = st.id === progress.stageId;
             const runs = progress.streaks[String(st.id)] ?? 0;
-            const badge = done ? 'CLEAR' : current ? 'NOW' : unlocked ? (progress.dev && !earned(st) ? 'DEV' : 'OPEN') : 'LOCKED';
+            const badge = done ? 'CLEAR' : current ? 'NOW' : unlocked ? (dev && !earned(st) ? 'DEV' : 'OPEN') : 'LOCKED';
             const badgeBg = done || current ? 'var(--cream)' : badge === 'DEV' ? 'var(--pink)' : unlocked ? 'var(--cream)' : 'var(--night)';
             return (
               <button
@@ -35,6 +37,9 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
                 onClick={() => setSel(st.id)}
                 aria-label={`${isHarmony(st) ? 'Progression path' : 'Territory'} ${stageCode(st)}, ${st.name}, ${badge.toLowerCase()}`}
               >
+                <div className="tile-art">
+                  <WorldScene stageId={st.id} />
+                </div>
                 <div className="row between" style={{ gap: 6 }}>
                   <span className="num">{stageCode(st)}</span>
                   <span className="tbadge" style={{ background: badgeBg, color: unlocked ? 'var(--night)' : 'var(--dim)' }}>
@@ -82,7 +87,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
         <div className="row between" style={{ alignItems: 'baseline' }}>
           <h1 style={{ fontSize: 15 }}>Ten territories. Ten clean runs in a row opens each gate.</h1>
           <span className="muted" style={{ fontSize: 20 }}>
-            {cleared} of 10 cleared{progress.dev ? ' · free roam lets you jump anywhere' : ''}
+            {cleared} of 10 cleared{dev ? ' · free roam lets you jump anywhere' : ''}
           </span>
         </div>
 
@@ -92,14 +97,16 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
           <span className={'badge' + (minorOpen ? '' : ' locked')} style={minorOpen ? { background: 'var(--violet)' } : undefined}>
             MINOR{minorOpen ? '' : ' · T4'}
           </span>
-          <button
-            type="button"
-            className={'toggle danger' + (progress.dev ? ' on' : '')}
-            onClick={() => dispatch({ type: 'toggleDev' })}
-            aria-pressed={progress.dev}
-          >
-            {progress.dev ? 'DEV: FREE ROAM ON' : 'DEV: FREE ROAM'}
-          </button>
+          {DEV_ALLOWED && (
+            <button
+              type="button"
+              className={'toggle danger' + (dev ? ' on' : '')}
+              onClick={() => dispatch({ type: 'toggleDev' })}
+              aria-pressed={dev}
+            >
+              {dev ? 'DEV: FREE ROAM ON' : 'DEV: FREE ROAM'}
+            </button>
+          )}
         </div>
 
         <div className="tiles">{STAGES.map(tile)}</div>
@@ -113,6 +120,9 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
         <div className="tiles">{HARMONY_STAGES.map(tile)}</div>
 
         <section className="panel row" style={{ background: open ? s.color : 'var(--muted)', color: 'var(--night)', alignItems: 'flex-start', gap: 24, padding: '22px 24px' }}>
+          <div className={'panel-art' + (open ? '' : ' dim')}>
+            <WorldScene stageId={s.id} label={`${s.name}, pixel scene`} />
+          </div>
           <div className="col" style={{ flex: '2 1 420px', minWidth: 0, gap: 10 }}>
             <div className="lbl" style={{ color: 'var(--night)', opacity: 0.7, fontSize: 9 }}>
               {harmony ? 'PROGRESSION PATH' : 'TERRITORY'} {stageCode(s)} · {HOME_LONG[s.home]}
@@ -176,7 +186,7 @@ export function Territory({ go }: { go: (s: Screen) => void }) {
             ) : (
               <div className="row" style={{ gap: 12, fontSize: 21 }}>
                 <Lock />
-                Locked. Turn on free roam to test it.
+                Locked. Clear the territory before it to open this one.
               </div>
             )}
           </div>
