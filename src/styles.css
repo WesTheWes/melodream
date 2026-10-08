@@ -1086,3 +1086,10 @@ input[type='range'] {
   background: var(--cream);
   color: var(--night);
 }
+
+/* Luna sprites: scaled by whole numbers, kept square and crisp */
+.luna {
+  display: block;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}

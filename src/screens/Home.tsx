@@ -33,7 +33,7 @@ export function Home({ go }: { go: (s: Screen) => void }) {
         <div className="row" style={{ alignItems: 'stretch', gap: 32 }}>
           <section className="col" style={{ flex: '1 1 520px', minWidth: 0, justifyContent: 'center', gap: 28 }}>
             <div className="row" style={{ alignItems: 'flex-end', gap: 24 }}>
-              <Mascot />
+              <Mascot mood="curious" scale={2} />
               <h1 className="logo">
                 MELO
                 <br />

@@ -1,42 +1,26 @@
-// Dreamy, the sleeping cloud. 16×10 grid.
-export function Mascot({ size = 128, awake = false }: { size?: number; awake?: boolean }) {
-  const h = (size * 10) / 16;
+// Luna, the mascot: four pixel-art sprites in public/luna, one per mood.
+// Each PNG is stored at 1 pixel per art pixel and scaled up by a whole number
+// so the pixels stay square and crisp.
+export type LunaMood = 'curious' | 'happy' | 'excited' | 'sleep';
+
+const SPRITES: Record<LunaMood, { w: number; h: number; label: string }> = {
+  curious: { w: 72, h: 92, label: 'Luna, head tilted, listening' },
+  happy: { w: 77, h: 90, label: 'Luna, smiling' },
+  excited: { w: 84, h: 91, label: 'Luna, bounding forward with her tongue out' },
+  sleep: { w: 95, h: 72, label: 'Luna, curled up asleep' },
+};
+
+export function Mascot({ mood = 'curious', scale = 2, className }: { mood?: LunaMood; scale?: number; className?: string }) {
+  const s = SPRITES[mood];
   return (
-    <svg className="px" width={size} height={h} viewBox="0 0 16 10" aria-label={awake ? 'Dreamy, awake' : 'Dreamy, asleep'}>
-      <rect x="5" y="0" width="4" height="1" fill="#0E0B1F" />
-      <rect x="4" y="1" width="1" height="1" fill="#0E0B1F" />
-      <rect x="5" y="1" width="4" height="1" fill="#FFF7E6" />
-      <rect x="9" y="1" width="1" height="1" fill="#0E0B1F" />
-      <rect x="2" y="2" width="2" height="1" fill="#0E0B1F" />
-      <rect x="4" y="2" width="6" height="1" fill="#FFF7E6" />
-      <rect x="10" y="2" width="2" height="1" fill="#0E0B1F" />
-      <rect x="1" y="3" width="1" height="1" fill="#0E0B1F" />
-      <rect x="2" y="3" width="10" height="1" fill="#FFF7E6" />
-      <rect x="12" y="3" width="1" height="1" fill="#0E0B1F" />
-      <rect x="0" y="4" width="1" height="4" fill="#0E0B1F" />
-      <rect x="1" y="4" width="12" height="4" fill="#FFF7E6" />
-      <rect x="13" y="4" width="1" height="4" fill="#0E0B1F" />
-      {awake ? (
-        <>
-          <rect x="3" y="4" width="2" height="2" fill="#0E0B1F" />
-          <rect x="8" y="4" width="2" height="2" fill="#0E0B1F" />
-          <rect x="5" y="7" width="4" height="1" fill="#0E0B1F" />
-        </>
-      ) : (
-        <>
-          <rect x="3" y="5" width="2" height="1" fill="#0E0B1F" />
-          <rect x="8" y="5" width="2" height="1" fill="#0E0B1F" />
-        </>
-      )}
-      <rect x="2" y="6" width="1" height="1" fill="#FF6FA5" />
-      <rect x="11" y="6" width="1" height="1" fill="#FF6FA5" />
-      <rect x="1" y="8" width="12" height="1" fill="#0E0B1F" />
-      <rect x="3" y="9" width="2" height="1" fill="#0E0B1F" opacity=".35" />
-      <rect x="9" y="9" width="2" height="1" fill="#0E0B1F" opacity=".35" />
-      <rect x="14" y="0" width="1" height="1" fill="#FFD166" />
-      <rect x="15" y="1" width="1" height="1" fill="#FFD166" />
-      <rect x="14" y="2" width="1" height="1" fill="#FFD166" />
-    </svg>
+    <img
+      className={'luna' + (className ? ' ' + className : '')}
+      src={`${import.meta.env.BASE_URL}luna/${mood}.png`}
+      width={s.w * scale}
+      height={s.h * scale}
+      alt={s.label}
+      draggable={false}
+    />
   );
 }
 

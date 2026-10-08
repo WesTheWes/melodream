@@ -494,7 +494,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
           <section className="panel col" style={{ gap: 22, minHeight: 440, justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'var(--bar)' }}>
             <div className="lbl">STEP 4 · HEAR IT INSIDE</div>
             <div style={{ position: 'relative' }}>
-              <Mascot size={128} />
+              <Mascot mood="sleep" scale={2} />
               <span className="ps" style={{ position: 'absolute', right: -40, top: -18, fontSize: 12, color: 'var(--muted)' }}>z</span>
               <span className="ps" style={{ position: 'absolute', right: -58, top: -40, fontSize: 16, color: 'var(--muted)' }}>z</span>
             </div>
@@ -612,7 +612,10 @@ export function Play({ go }: { go: (s: Screen) => void }) {
         {phase === 5 && (
           <section className="panel col" style={{ gap: 18 }}>
             <div className="row between" style={{ alignItems: 'flex-start' }}>
-              <div>
+              <div className="row" style={{ gap: 18, alignItems: 'center', flexWrap: 'nowrap' }}>
+                {/* Luna reacts: a smile for a clean take, her head tilt otherwise */}
+                <Mascot mood={cleanTake ? 'happy' : 'curious'} scale={1} />
+                <div>
                 <div className="lbl">STEP 6 · HOW DID IT LAND?</div>
                 <h2 style={{ marginTop: 10, color: perfect ? 'var(--mint)' : correct >= total - 1 ? 'var(--gold)' : 'var(--pink)' }}>
                   {perfect
@@ -625,6 +628,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
                       ? 'So close. One note slipped.'
                       : 'Good attempt. Let’s clarify a couple of notes.'}
                 </h2>
+                </div>
               </div>
               <div className="badge" style={{ fontSize: 14, padding: '12px 14px', background: perfect ? 'var(--mint)' : correct >= total - 1 ? 'var(--gold)' : 'var(--pink)' }}>
                 {correct} / {total}
@@ -944,7 +948,7 @@ function LevelUp({
         </div>
         <div className="row" style={{ gap: 22, alignItems: 'center' }}>
           <div className="bounce">
-            <Mascot size={112} />
+            <Mascot mood="excited" scale={2} />
           </div>
           <div className="col" style={{ gap: 10 }}>
             <div className="lbl" style={{ color: 'var(--night)', opacity: 0.7 }}>
