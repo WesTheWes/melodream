@@ -56,7 +56,7 @@ Notes are semitones above the tonic (0 = 1, 4 = 3, 7 = 5, 12 = 1 an octave up). 
 
 ## Progression Paths (harmony licks)
 
-Twelve territories (H1–H12) where licks ride on chord changes: I–IV, I–V–vi–IV, blues, ii–V–I, turnarounds, borrowed chords, the minor ii–V, modal vamps, bebop vocabulary and funk vamps. Jazz and blues paths swing their eighth notes (`SWING_STAGES` and swing tags in `licks.ts`). Each opens when its main-road territory is cleared (`after` in `stages.ts`).
+Ten territories (H1–H10) where licks ride on chord changes: I–IV, I–V–vi–IV, blues, ii–V–I, turnarounds, borrowed chords, the minor ii–V, modal vamps, bebop vocabulary and funk vamps. Jazz and blues paths swing their eighth notes (`SWING_STAGES` and swing tags in `licks.ts`). Each opens when its main-road territory is cleared (`after` in `stages.ts`).
 
 The home rule: notes are always graded as degrees of the home key. Borrowed chords just bring altered degrees (♭3, ♭6, ♭7), and a brief secondary dominant brings ♯4. Feedback adds the chord lens (each note's job over its chord), and from H4 on, **Land the Target** asks which degree each new chord lands on. A missed target spoils the clean run. Home never moves in these paths; real modulation is future work.
 
@@ -74,16 +74,25 @@ The Play screen toggles between **PIANO** (real key positions, one octave from h
 
 ## Where the licks come from
 
-About 1,800 licks in all (`src/music/library.ts` gathers them):
+About 450 licks in all (`src/music/library.ts` gathers them):
 
 | Source | File | Licks |
 | --- | --- | --- |
-| Hand-written | `licks.ts` | 135 |
-| Generated: rule-based melodies for every territory, seeded so ids are stable | `generate.ts` | ~790 |
-| *Licks For Days* by Christopher Zuar, used with permission (C versions; ids follow the book's numbering) | `book.ts` | 136 |
-| Phrases from real solos, Weimar Jazz Database, ODbL v1.0 (see `data/README.md`) | `data/wjazzd-licks.json` → `solos.ts` | 727 |
+| Hand-written | `licks.ts` | 311 |
+| *Licks For Days* jazz licks (C versions, in Bebop Boulevard; ids follow the book's numbering) | `book.ts` | 136 |
+| Recorded from your piano (dev → Record) | `data/recorded.json` → `recorded.ts` | yours |
 
 The picker rests recently heard licks (roughly the last 60% of a territory's pool), so repeats are rare. The keyboard spans two octaves from home, stretching further when a lick needs it.
+
+## Rating licks (dev)
+
+With `?dev=me`, a **LICKS (DEV)** tab lists every lick: filter by territory, source or rating, search by id, tag or degrees, play it in C, or jump into the game with it. **★ Like** makes a lick come up about three times as often; **✕ Hide** keeps it out of the game. The Play screen's dev row has the same buttons for the current lick.
+
+Ratings live in `src/music/data/ratings.json`. On the local dev server (`npm run dev`), every click saves straight to that file; commit it to publish your picks.
+
+## Recording licks from your piano (dev)
+
+With `?dev=me`, the **RECORD (DEV)** tab records a lick from a MIDI keyboard (Chrome asks once for MIDI access) or, failing that, the microphone's pitch tracker. Pick the key you'll play in, major or minor, the territory to file it under, a tempo and a grid (eighths, sixteenths or triplets, plus a swing-feel switch). **Record** gives one bar of clicks; play on the next downbeat and the metronome keeps going until you press Stop or leave two beats of silence. The take is snapped to the grid, shown as degrees, and can be played back, re-snapped to another grid, saved, or saved and played straight away in the game. Recorded licks get ids like `rec-…` and live in `src/music/data/recorded.json`; on the local dev server every save writes to that file, so commit it to publish. Recordings are single-line licks for now (no chord changes).
 
 ## Saved licks
 

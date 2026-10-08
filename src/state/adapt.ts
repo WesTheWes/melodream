@@ -1,4 +1,5 @@
 import { licksForStage } from '../music/library';
+import { isLiked } from '../music/ratings';
 import type { Lick } from '../music/licks';
 import type { Stage } from '../music/stages';
 import { pcOf, type Mode } from '../music/theory';
@@ -77,7 +78,8 @@ export function pickLick(stage: Stage, stats: Stats, recent: string[], rng: () =
         if (t && t.seen >= 2 && t.right / t.seen < 0.75) w += 1;
       });
     }
-    return w;
+    // Licks you've liked come up about three times as often.
+    return isLiked(l.id) ? w * 3 : w;
   });
   const total = weights.reduce((a, b) => a + b, 0);
   let r = rng() * total;

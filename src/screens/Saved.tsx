@@ -44,6 +44,7 @@ export function Saved({ go }: { go: (s: Screen) => void }) {
         bpm,
         {
           swing: lick.swing,
+          lead: lick.lead,
           onNote: setSoundingIdx,
           onDone: () => {
             setPlayingId(null);

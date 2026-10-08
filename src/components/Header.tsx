@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Screen } from '../router';
 import { useStore } from '../state/store';
+import { DEV_ALLOWED } from '../dev';
 
 export function Header({
   screen,
@@ -28,6 +29,8 @@ export function Header({
           <Nav to="territory" label="TERRITORY" />
           <Nav to="map" label="TONAL MAP" />
           <Nav to="saved" label={saved ? `SAVED · ${saved}` : 'SAVED'} />
+          {DEV_ALLOWED && <Nav to="licks" label="LICKS (DEV)" />}
+          {DEV_ALLOWED && <Nav to="record" label="RECORD (DEV)" />}
         </nav>
       </div>
       <div className="hdr-right">{right}</div>

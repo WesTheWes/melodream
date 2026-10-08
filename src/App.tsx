@@ -3,6 +3,9 @@ import { useScreen } from './router';
 import { Home } from './screens/Home';
 import { Play } from './screens/Play';
 import { Saved } from './screens/Saved';
+import { LickBrowser } from './screens/LickBrowser';
+import { LickRecorder } from './screens/LickRecorder';
+import { DEV_ALLOWED } from './dev';
 import { Territory } from './screens/Territory';
 import { TonalMap } from './screens/TonalMap';
 import { StoreProvider, useStore } from './state/store';
@@ -37,6 +40,8 @@ function Shell() {
       {screen === 'territory' && <Territory go={go} />}
       {screen === 'map' && <TonalMap go={go} />}
       {screen === 'saved' && <Saved go={go} />}
+      {screen === 'licks' && DEV_ALLOWED && <LickBrowser go={go} />}
+      {screen === 'record' && DEV_ALLOWED && <LickRecorder go={go} />}
     </div>
   );
 }

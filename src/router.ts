@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-export type Screen = 'home' | 'play' | 'territory' | 'map' | 'saved';
+export type Screen = 'home' | 'play' | 'territory' | 'map' | 'saved' | 'licks' | 'record';
 
-const VALID: Screen[] = ['home', 'play', 'territory', 'map', 'saved'];
+const VALID: Screen[] = ['home', 'play', 'territory', 'map', 'saved', 'licks', 'record'];
 
 function fromHash(): Screen {
   const h = window.location.hash.replace(/^#\/?/, '') as Screen;

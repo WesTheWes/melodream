@@ -1103,3 +1103,63 @@ input[type='range'] {
   image-rendering: pixelated;
   flex: 0 0 auto;
 }
+
+/* Lick browser (dev) */
+.dev-select,
+.dev-input {
+  font-family: var(--vt);
+  font-size: 20px;
+  background: var(--night);
+  color: var(--cream);
+  border: 3px solid var(--ink);
+  padding: 6px 8px;
+  min-height: 40px;
+}
+.dev-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.lick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lick-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 4px solid var(--ink);
+}
+.lick-row.liked {
+  box-shadow: inset 6px 0 0 var(--mint);
+}
+.lick-row.hidden {
+  opacity: 0.5;
+}
+.lick-id {
+  font-size: 10px;
+}
+.lick-row .chip {
+  background: var(--cream);
+  color: var(--night);
+}
+.lick-notes {
+  gap: 4px;
+}
+.lick-note {
+  min-width: 30px;
+  padding: 4px 6px;
+  text-align: center;
+  font-family: var(--ps);
+  font-size: 9px;
+  color: var(--night);
+  border: 3px solid var(--ink);
+}
+.lick-note.lit {
+  outline: 3px solid var(--cream);
+}

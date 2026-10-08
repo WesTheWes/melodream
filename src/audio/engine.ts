@@ -101,12 +101,14 @@ class Engine {
     const mine: number[] = [];
     changes.forEach((ch, i) => {
       const len = ch.beats * b;
+      // the final chord rings on a little after the phrase ends
+      const ring = i === changes.length - 1 ? len + 1.5 * b : len * 0.96;
       if (ctx) {
-        ch.tones.forEach((s) => this.tone({ midi: tonicMidi + s, at: t, dur: len * 0.96, type: 'triangle', gain: 0.03 * gain }));
+        ch.tones.forEach((s) => this.tone({ midi: tonicMidi + s, at: t, dur: ring, type: 'triangle', gain: 0.03 * gain }));
         const bass = tonicMidi - 24 + (((ch.root % 12) + 12) % 12);
         const hits = ch.beats >= 4 ? [0, 2] : [0];
         hits.forEach((h, k) => {
-          const d = (k === hits.length - 1 ? ch.beats - h : 2) * b;
+          const d = (k === hits.length - 1 ? ch.beats - h + (i === changes.length - 1 ? 1.5 : 0) : 2) * b;
           this.tone({ midi: bass, at: t + h * b, dur: d * 0.9, type: 'square', gain: 0.045 * gain });
         });
       }
@@ -130,36 +132,53 @@ class Engine {
 
   // Play a phrase. onNote fires (on the UI clock) as each note begins;
   // onDone fires after the last note ends. Returns a cancel function.
+  // `lead` is rest before the first note, in beats (a pickup), so the phrase
+  // sits on the beat against the backing, which starts at beat 0.
   playPhrase(
     midis: number[],
     beats: number[],
     bpm: number,
-    hooks: { onNote?: (i: number) => void; onDone?: () => void; swing?: boolean } = {},
+    hooks: { onNote?: (i: number) => void; onDone?: () => void; swing?: boolean; lead?: number } = {},
   ): () => void {
     const ctx = this.ensure();
     const b = 60 / bpm;
-    const start = ctx ? ctx.currentTime + 0.06 : 0;
-    let t = start;
-    let ms = 60;
+    const lead = hooks.lead ?? 0;
     const mine: number[] = [];
-    // Swing: written eighths play long-short (2:1). Each note's start and end
-    // are moved, so the phrase keeps its length and stays on the beat.
-    const feel = (pos: number) => {
-      if (!hooks.swing) return pos;
-      const beat = Math.floor(pos + 1e-9);
-      const f = pos - beat;
-      return beat + (f <= 0.5 ? f * (4 / 3) : 2 / 3 + (f - 0.5) * (2 / 3));
-    };
-    let pos = 0;
-    midis.forEach((m, i) => {
-      const dur = (feel(pos + beats[i]) - feel(pos)) * b;
-      pos += beats[i];
-      if (ctx) this.tone({ midi: m, at: t, dur: Math.max(0.08, dur * 0.9) });
-      if (hooks.onNote) mine.push(window.setTimeout(() => hooks.onNote?.(i), ms));
-      t += dur;
-      ms += dur * 1000;
+    // Note onsets in beats from the downbeat.
+    const onsets: number[] = [];
+    let p = lead;
+    beats.forEach((d) => {
+      onsets.push(p);
+      p += d;
     });
-    if (hooks.onDone) mine.push(window.setTimeout(() => hooks.onDone?.(), ms + 40));
+    const frac = (x: number) => x - Math.floor(x + 1e-9);
+    const near = (x: number, y: number) => Math.abs(x - y) < 1e-6;
+    // Swing: written eighths play long-short (2:1). Only beats made purely of
+    // eighth notes swing; triplets and sixteenths are already where they belong.
+    const plainBeat = new Set<number>();
+    if (hooks.swing) {
+      const byBeat = new Map<number, number[]>();
+      [...onsets, p].forEach((x) => {
+        const k = Math.floor(x + 1e-9);
+        byBeat.set(k, [...(byBeat.get(k) ?? []), frac(x)]);
+      });
+      byBeat.forEach((fs, k) => {
+        if (fs.every((f) => near(f, 0) || near(f, 0.5))) plainBeat.add(k);
+      });
+    }
+    const feel = (x: number) => (plainBeat.has(Math.floor(x + 1e-9)) && near(frac(x), 0.5) ? Math.floor(x + 1e-9) + 2 / 3 : x);
+    const t0 = ctx ? ctx.currentTime + 0.06 : 0;
+    midis.forEach((m, i) => {
+      const start = feel(onsets[i]);
+      const end = feel(onsets[i] + beats[i]);
+      const last = i === midis.length - 1;
+      // the last note rings at least a beat and a half, so phrases don't stop dead
+      const sound = last ? Math.max(end - start, 1.5) : (end - start) * 0.9;
+      if (ctx) this.tone({ midi: m, at: t0 + start * b, dur: Math.max(0.08, sound * b) });
+      if (hooks.onNote) mine.push(window.setTimeout(() => hooks.onNote?.(i), 60 + start * b * 1000));
+    });
+    const endBeat = feel(p);
+    if (hooks.onDone) mine.push(window.setTimeout(() => hooks.onDone?.(), 60 + endBeat * b * 1000 + 40));
     this.timers.push(...mine);
     return () => mine.forEach((id) => window.clearTimeout(id));
   }
@@ -167,6 +186,11 @@ class Engine {
   cancelAll(): void {
     this.timers.forEach((id) => window.clearTimeout(id));
     this.timers = [];
+  }
+
+  // Metronome click, scheduled on the audio clock. Accent the downbeat.
+  click(at: number, accent = false): void {
+    this.tone({ midi: accent ? 88 : 81, at, dur: 0.05, type: 'square', gain: accent ? 0.05 : 0.03 });
   }
 
   // Little UI sounds.

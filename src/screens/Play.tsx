@@ -10,6 +10,9 @@ import type { Chord, Lick } from '../music/licks';
 import { GATE, HARMONY_STAGES, STAGES, WINDOW, isHarmony, stageById, stageCode, type Stage } from '../music/stages';
 import { chordToneLabel, chordToneWord, degreeColor, degreeLabel, degreeSpoken, hintFor, pcOf, spellNote, tonicName, type Mode, type Scale } from '../music/theory';
 import { pickLick, pickTonic, whyThisLick } from '../state/adapt';
+import { DEV_ALLOWED, takeForcedLick } from '../dev';
+import { lickById } from '../music/library';
+import { ratingOf, setRating, subscribeRatings } from '../music/ratings';
 import { cleanCount, needsWarmup, useStore } from '../state/store';
 import type { Screen } from '../router';
 
@@ -70,7 +73,10 @@ export function Play({ go }: { go: (s: Screen) => void }) {
 
   const startRound = useCallback(() => {
     const p = progressRef.current;
-    const lick = pickLick(stage, p.stats, p.recentLicks);
+    // Dev: the lick browser can ask for a specific lick in this territory.
+    const forcedId = DEV_ALLOWED ? takeForcedLick() : null;
+    const forced = forcedId ? lickById(forcedId) : undefined;
+    const lick = forced && forced.stage === stage.id ? forced : pickLick(stage, p.stats, p.recentLicks);
     clearedAtStart.current = p.cleared.includes(stage.id);
     setCelebrateDismissed(false);
     setRound({ lick, tonic: pickTonic(lick, Math.random, p.alwaysC), mode: lick.home, scale: lick.scale });
@@ -176,6 +182,7 @@ export function Play({ go }: { go: (s: Screen) => void }) {
     }
     cancelRef.current = engine.playPhrase(midis, round.lick.durs, slow ? bpm * 0.6 : bpm, {
       swing: round.lick.swing,
+      lead: round.lick.lead,
       onNote: (i) => {
         setSoundingIdx(i);
         setSayIdx(slow ? i : -1);
@@ -1040,6 +1047,10 @@ function Settings({
   lick: Lick;
   onNewLick: () => void;
 }) {
+  // Dev: rate the current lick (saved to data/ratings.json on the local dev server).
+  const [, bump] = useState(0);
+  useEffect(() => subscribeRatings(() => bump((n) => n + 1)), []);
+  const rating = ratingOf(lick.id);
   return (
     <div className="row between muted" style={{ fontSize: 20, borderTop: '4px dashed var(--ink)', paddingTop: 14 }}>
       <label className="row" style={{ gap: 10 }}>
@@ -1080,6 +1091,13 @@ function Settings({
           <button type="button" className="toggle" onClick={onNewLick}>
             SKIP LICK
           </button>
+          <button type="button" className={'toggle' + (rating === 'liked' ? ' on' : '')} aria-pressed={rating === 'liked'} onClick={() => void setRating(lick.id, rating === 'liked' ? null : 'liked')}>
+            ★ LIKE
+          </button>
+          <button type="button" className={'toggle danger' + (rating === 'hidden' ? ' on' : '')} aria-pressed={rating === 'hidden'} onClick={() => void setRating(lick.id, rating === 'hidden' ? null : 'hidden')}>
+            ✕ HIDE
+          </button>
+          <span className="muted" style={{ fontSize: 18 }}>{lick.id}</span>
         </div>
       )}
     </div>
